@@ -1,0 +1,16 @@
+# NexusRemote Python后端依赖
+
+# Web框架
+Flask==2.3.3
+Flask-CORS==4.0.0
+flask-socketio==5.3.4
+
+# WebSocket支持
+python-socketio==5.9.0
+eventlet==0.33.3
+
+# 数据序列化
+Werkzeug==2.3.7
+
+# 算法依赖（与现有Python脚本兼容）
+# 注意：现有脚本使用标准库，无额外依赖

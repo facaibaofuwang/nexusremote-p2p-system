@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusRemote - 基于通证激励的去中心化 P2P 远程控制系统</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#3b82f6',
+                        highlight: '#6366f1',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        dark: '#0f172a',
+                        'dark-light': '#1e293b',
+                        'dark-lighter': '#334155'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-primary text-gray-200 min-h-screen flex flex-col">
+    <!-- 背景动画层 -->
+    <div id="animationBackground" class="fixed inset-0 pointer-events-none opacity-20 z-0"></div>
+
+    <!-- 主容器 -->
+    <div class="flex h-screen overflow-hidden relative z-10">
+        <!-- 侧边栏导航 -->
+        <div id="sidebar"></div>
+
+        <!-- 主要内容区域 -->
+        <div class="flex-1 flex flex-col overflow-hidden">
+            <!-- 顶部工具栏 -->
+            <div id="topbar"></div>
+
+            <!-- 主内容 -->
+            <main class="flex-1 overflow-y-auto scrollbar-thin p-6 bg-grid">
+                <!-- 页面标题 -->
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-white mb-2">仪表盘</h2>
+                    <p class="text-gray-400">欢迎回来，查看您的网络状态和通证余额</p>
+                </div>
+
+                <!-- 状态卡片 -->
+                <div id="statusCards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"></div>
+
+                <!-- 图表区域 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- 通证趋势图表 -->
+                    <div class="bg-secondary rounded-lg p-5">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-white">通证趋势</h3>
+                            <div class="flex space-x-2">
+                                <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">日</button>
+                                <button class="text-xs px-3 py-1 rounded-full bg-accent text-white">周</button>
+                                <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">月</button>
+                            </div>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="tokenChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 网络性能图表 -->
+                    <div class="bg-secondary rounded-lg p-5">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-white">网络性能</h3>
+                            <div class="flex space-x-2">
+                                <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">实时</button>
+                                <button class="text-xs px-3 py-1 rounded-full bg-accent text-white">历史</button>
+                            </div>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="networkChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设备列表 -->
+                <div id="deviceTable" class="bg-secondary rounded-lg p-5 mb-6"></div>
+
+                <!-- 最近活动 -->
+                <div class="bg-secondary rounded-lg p-5">
+                    <h3 class="font-bold text-white mb-4">最近活动</h3>
+                    <div id="recentActivity"></div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 组件脚本 -->
+    <script src="js/components/sidebar.js"></script>
+    <script src="js/components/topbar.js"></script>
+    <script src="js/components/statusCards.js"></script>
+    <script src="js/components/deviceTable.js"></script>
+    <script src="js/components/recentActivity.js"></script>
+    
+    <!-- 工具脚本 -->
+    <script src="js/utils/backgroundAnimation.js"></script>
+    <script src="js/utils/charts.js"></script>
+    
+    <!-- 主应用脚本 -->
+    <script src="js/app.js"></script>
+</body>
+</html>

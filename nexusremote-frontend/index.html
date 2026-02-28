@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusRemote - 基于通证激励的去中心化 P2P 远程控制系统</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#3b82f6',
+                        highlight: '#6366f1',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        dark: '#0f172a',
+                        'dark-light': '#1e293b',
+                        'dark-lighter': '#334155'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .text-glow {
+                text-shadow: 0 0 10px rgba(99, 102, 241, 0.7);
+            }
+            .bg-grid {
+                background-image: 
+                    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .scrollbar-thin {
+                scrollbar-width: thin;
+            }
+            .scrollbar-thin::-webkit-scrollbar {
+                width: 5px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-track {
+                background: rgba(15, 23, 42, 0.1);
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+                background: rgba(99, 102, 241, 0.5);
+                border-radius: 5px;
+            }
+            .clip-path-polygon {
+                clip-path: polygon(
+                    0% 0%, 
+                    95% 0%, 
+                    100% 5%, 
+                    100% 100%, 
+                    5% 100%, 
+                    0% 95%
+                );
+            }
+        }
+    </style>
+</head>
+<body class="bg-primary text-gray-200 min-h-screen flex flex-col">
+    <!-- 背景动画层 -->
+    <div id="animationBackground" class="fixed inset-0 pointer-events-none opacity-20 z-0"></div>
+
+    <!-- 主容器 -->
+    <div class="flex h-screen overflow-hidden relative z-10">
+        <!-- 左侧导航栏 -->
+        <aside class="w-64 bg-secondary border-r border-dark-lighter flex flex-col">
+            <!-- Logo -->
+            <div class="p-4 border-b border-dark-lighter flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
+                    <i class="fa fa-connectdevelop text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white">NexusRemote</h1>
+                    <p class="text-xs text-gray-400">v3.0 Final</p>
+                </div>
+            </div>
+
+            <!-- 导航菜单 -->
+            <nav class="flex-1 overflow-y-auto scrollbar-thin py-4">
+                <ul class="space-y-1 px-2">
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-accent bg-opacity-20 text-white">
+                            <i class="fa fa-tachometer w-5 text-center"></i>
+                            <span>仪表盘</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-desktop w-5 text-center"></i>
+                            <span>远程控制</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-sitemap w-5 text-center"></i>
+                            <span>网络节点</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-exchange w-5 text-center"></i>
+                            <span>通证管理</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-shield w-5 text-center"></i>
+                            <span>安全中心</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-cogs w-5 text-center"></i>
+                            <span>系统设置</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="mt-8 px-4">
+                    <h3 class="text-xs uppercase text-gray-500 font-semibold mb-2">节点状态</h3>
+                    <div class="bg-dark-lighter rounded-lg p-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm">当前角色</span>
+                            <span class="text-xs px-2 py-1 rounded-full bg-success bg-opacity-20 text-success">控制端</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm">网络状态</span>
+                            <span class="text-xs px-2 py-1 rounded-full bg-success bg-opacity-20 text-success">已连接</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">NAT 类型</span>
+                            <span class="text-xs px-2 py-1 rounded-full bg-warning bg-opacity-20 text-warning">对称型</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- 用户信息 -->
+            <div class="p-4 border-t border-dark-lighter">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                        U
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-white">用户001</p>
+                        <p class="text-xs text-gray-400">信誉: 95/100</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-white">
+                        <i class="fa fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 flex flex-col overflow-hidden bg-grid">
+            <!-- 顶部导航栏 -->
+            <header class="h-16 bg-secondary border-b border-dark-lighter flex items-center justify-between px-6">
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-400 hover:text-white">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                    <div class="relative">
+                        <input type="text" placeholder="搜索设备、节点或命令..." class="bg-dark-lighter text-gray-300 rounded-lg pl-10 pr-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-accent">
+                        <i class="fa fa-search absolute left-3 top-3 text-gray-500"></i>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="relative text-gray-400 hover:text-white">
+                        <i class="fa fa-bell"></i>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-danger rounded-full"></span>
+                    </button>
+                    <button class="relative text-gray-400 hover:text-white">
+                        <i class="fa fa-envelope"></i>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-danger rounded-full"></span>
+                    </button>
+                    <div class="h-6 w-px bg-dark-lighter mx-2"></div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-success rounded-full"></div>
+                        <span class="text-sm">在线</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 内容区域 -->
+            <div class="flex-1 overflow-y-auto scrollbar-thin p-6">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-white mb-2">仪表盘</h2>
+                    <p class="text-gray-400">欢迎回来，查看您的网络状态和通证余额</p>
+                </div>
+
+                <!-- 状态卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <!-- 通证余额 -->
+                    <div class="bg-secondary rounded-lg p-5 border-l-4 border-accent">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm font-medium text-gray-400">通证余额</p>
+                                <h3 class="text-3xl font-bold text-white mt-1">1,248.5 NEXUS</h3>
+                                <p class="text-xs text-success flex items-center mt-1">
+                                    <i class="fa fa-arrow-up mr-1"></i>
+                                    <span>+12.5% 本周</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-accent bg-opacity-20 flex items-center justify-center">
+                                <i class="fa fa-money text-accent text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="h-2 bg-dark-lighter rounded-full overflow-hidden">
+                                <div class="h-full bg-accent rounded-full" style="width: 65%"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                <span>可用余额</span>
+                                <span>最大容量: 2,000 NEXUS</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 网络状态 -->
+                    <div class="bg-secondary rounded-lg p-5 border-l-4 border-success">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm font-medium text-gray-400">网络状态</p>
+                                <h3 class="text-3xl font-bold text-white mt-1">良好</h3>
+                                <p class="text-xs text-success flex items-center mt-1">
+                                    <i class="fa fa-signal mr-1"></i>
+                                    <span>低延迟，高带宽</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-success bg-opacity-20 flex items-center justify-center">
+                                <i class="fa fa-wifi text-success text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-xs text-gray-500">延迟</p>
+                                <p class="text-sm font-medium text-white">12ms</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">带宽</p>
+                                <p class="text-sm font-medium text-white">50Mbps</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">丢包率</p>
+                                <p class="text-sm font-medium text-white">0.1%</p>
+                            </div>
+                            <div>
+                                <p class="text-xs text-gray-500">节点数</p>
+                                <p class="text-sm font-medium text-white">127</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 设备状态 -->
+                    <div class="bg-secondary rounded-lg p-5 border-l-4 border-warning">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <p class="text-sm font-medium text-gray-400">设备状态</p>
+                                <h3 class="text-3xl font-bold text-white mt-1">5 台在线</h3>
+                                <p class="text-xs text-warning flex items-center mt-1">
+                                    <i class="fa fa-desktop mr-1"></i>
+                                    <span>1 台需要注意</span>
+                                </p>
+                            </div>
+                            <div class="w-12 h-12 rounded-full bg-warning bg-opacity-20 flex items-center justify-center">
+                                <i class="fa fa-laptop text-warning text-xl"></i>
+                            </div>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs text-gray-500">CPU 使用率</span>
+                                <span class="text-xs text-gray-500">45%</span>
+                            </div>
+                            <div class="h-2 bg-dark-lighter rounded-full overflow-hidden">
+                                <div class="h-full bg-warning rounded-full" style="width: 45%"></div>
+                            </div>
+                            <div class="flex items-center justify-between mb-2 mt-3">
+                                <span class="text-xs text-gray-500">内存使用率</span>
+                                <span class="text-xs text-gray-500">62%</span>
+                            </div>
+                            <div class="h-2 bg-dark-lighter rounded-full overflow-hidden">
+                                <div class="h-full bg-warning rounded-full" style="width: 62%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图表区域 -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- 通证趋势 -->
+                    <div class="bg-secondary rounded-lg p-5">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-white">通证趋势</h3>
+                            <div class="flex space-x-2">
+                                <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">日</button>
+                                <button class="text-xs px-3 py-1 rounded-full bg-accent text-white">周</button>
+                                <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">月</button>
+                            </div>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="tokenChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- 网络性能 -->
+                    <div class="bg-secondary rounded-lg p-5">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-white">网络性能</h3>
+                            <div class="flex space-x-2">
+                                <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">实时</button>
+                                <button class="text-xs px-3 py-1 rounded-full bg-accent text-white">历史</button>
+                            </div>
+                        </div>
+                        <div class="h-64">
+                            <canvas id="networkChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设备列表 -->
+                <div class="bg-secondary rounded-lg p-5 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-white">设备列表</h3>
+                        <button class="text-xs px-3 py-1 rounded-full bg-accent text-white flex items-center">
+                            <i class="fa fa-plus mr-1"></i>
+                            <span>添加设备</span>
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-gray-400 border-b border-dark-lighter">
+                                    <th class="pb-3 font-medium">设备名称</th>
+                                    <th class="pb-3 font-medium">IP 地址</th>
+                                    <th class="pb-3 font-medium">状态</th>
+                                    <th class="pb-3 font-medium">类型</th>
+                                    <th class="pb-3 font-medium">最后活动</th>
+                                    <th class="pb-3 font-medium">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-dark-lighter">
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3">
+                                                <i class="fa fa-desktop text-accent"></i>
+                                            </div>
+                                            <span>办公室电脑</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">192.168.1.100</td>
+                                    <td class="py-3">
+                                        <span class="px-2 py-1 rounded-full bg-success bg-opacity-20 text-success text-xs">在线</span>
+                                    </td>
+                                    <td class="py-3">控制端</td>
+                                    <td class="py-3">刚刚</td>
+                                    <td class="py-3">
+                                        <button class="text-accent hover:text-blue-400 mr-3">
+                                            <i class="fa fa-desktop"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white mr-3">
+                                            <i class="fa fa-cog"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-dark-lighter">
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3">
+                                                <i class="fa fa-laptop text-accent"></i>
+                                            </div>
+                                            <span>家用笔记本</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">192.168.1.105</td>
+                                    <td class="py-3">
+                                        <span class="px-2 py-1 rounded-full bg-success bg-opacity-20 text-success text-xs">在线</span>
+                                    </td>
+                                    <td class="py-3">被控端</td>
+                                    <td class="py-3">5分钟前</td>
+                                    <td class="py-3">
+                                        <button class="text-accent hover:text-blue-400 mr-3">
+                                            <i class="fa fa-desktop"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white mr-3">
+                                            <i class="fa fa-cog"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-dark-lighter">
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3">
+                                                <i class="fa fa-server text-accent"></i>
+                                            </div>
+                                            <span>文件服务器</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">192.168.1.200</td>
+                                    <td class="py-3">
+                                        <span class="px-2 py-1 rounded-full bg-warning bg-opacity-20 text-warning text-xs">需注意</span>
+                                    </td>
+                                    <td class="py-3">中继节点</td>
+                                    <td class="py-3">1小时前</td>
+                                    <td class="py-3">
+                                        <button class="text-accent hover:text-blue-400 mr-3">
+                                            <i class="fa fa-desktop"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white mr-3">
+                                            <i class="fa fa-cog"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-dark-lighter">
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3">
+                                                <i class="fa fa-tablet text-accent"></i>
+                                            </div>
+                                            <span>平板设备</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">192.168.1.110</td>
+                                    <td class="py-3">
+                                        <span class="px-2 py-1 rounded-full bg-success bg-opacity-20 text-success text-xs">在线</span>
+                                    </td>
+                                    <td class="py-3">被控端</td>
+                                    <td class="py-3">30分钟前</td>
+                                    <td class="py-3">
+                                        <button class="text-accent hover:text-blue-400 mr-3">
+                                            <i class="fa fa-desktop"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white mr-3">
+                                            <i class="fa fa-cog"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3">
+                                                <i class="fa fa-mobile text-accent"></i>
+                                            </div>
+                                            <span>移动设备</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">192.168.1.115</td>
+                                    <td class="py-3">
+                                        <span class="px-2 py-1 rounded-full bg-success bg-opacity-20 text-success text-xs">在线</span>
+                                    </td>
+                                    <td class="py-3">被控端</td>
+                                    <td class="py-3">15分钟前</td>
+                                    <td class="py-3">
+                                        <button class="text-accent hover:text-blue-400 mr-3">
+                                            <i class="fa fa-desktop"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white mr-3">
+                                            <i class="fa fa-cog"></i>
+                                        </button>
+                                        <button class="text-gray-400 hover:text-white">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 节点网络 -->
+                <div class="bg-secondary rounded-lg p-5">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-white">节点网络</h3>
+                        <div class="flex space-x-2">
+                            <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">全部</button>
+                            <button class="text-xs px-3 py-1 rounded-full bg-accent text-white">控制端</button>
+                            <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">被控端</button>
+                            <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">中继节点</button>
+                        </div>
+                    </div>
+                    <div class="h-96 relative">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <div class="w-64 h-64 relative animate-float">
+                                <!-- 中心节点 -->
+                                <div class="absolute inset-0 flex items-center justify-center">
+                                    <div class="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white font-bold text-lg border-4 border-white">
+                                        你
+                                    </div>
+                                </div>
+                                
+                                <!-- 第一层节点 -->
+                                <div class="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                                    <div class="w-10 h-10 rounded-full bg-success flex items-center justify-center text-white text-xs">
+                                        N1
+                                    </div>
+                                </div>
+                                <div class="absolute top-1/4 right-0 transform translate-x-1/2 -translate-y-1/2">
+                                    <div class="w-10 h-10 rounded-full bg-warning flex items-center justify-center text-white text-xs">
+                                        N2
+                                    </div>
+                                </div>
+                                <div class="absolute bottom-1/4 right-0 transform translate-x-1/2 translate-y-1/2">
+                                    <div class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white text-xs">
+                                        N3
+                                    </div>
+                                </div>
+                                <div class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2">
+                                    <div class="w-10 h-10 rounded-full bg-success flex items-center justify-center text-white text-xs">
+                                        N4
+                                    </div>
+                                </div>
+                                <div class="absolute bottom-1/4 left-0 transform -translate-x-1/2 translate-y-1/2">
+                                    <div class="w-10 h-10 rounded-full bg-warning flex items-center justify-center text-white text-xs">
+                                        N5
+                                    </div>
+                                </div>
+                                <div class="absolute top-1/4 left-0 transform -translate-x-1/2 -translate-y-1/2">
+                                    <div class="w-10 h-10 rounded-full bg-accent flex items-center justify-center text-white text-xs">
+                                        N6
+                                    </div>
+                                </div>
+                                
+                                <!-- 第二层节点 -->
+                                <div class="absolute top-0 left-1/4 transform -translate-x-1/2 -translate-y-1/2">
+                                    <div class="w-8 h-8 rounded-full bg-dark-lighter flex items-center justify-center text-white text-xs">
+                                        N7
+                                    </div>
+                                </div>
+                                <div class="absolute top-0 right-1/4 transform translate-x-1/2 -translate-y-1/2">
+                                    <div class="w-8 h-8 rounded-full bg-dark-lighter flex items-center justify-center text-white text-xs">
+                                        N8
+                                    </div>
+                                </div>
+                                <div class="absolute top-1/2 right-0 transform translate-x-1/2 -translate-y-1/2">
+                                    <div class="w-8 h-8 rounded-full bg-dark-lighter flex items-center justify-center text-white text-xs">
+                                        N9
+                                    </div>
+                                </div>
+                                <div class="absolute bottom-0 right-1/4 transform translate-x-1/2 translate-y-1/2">
+                                    <div class="w-8 h-8 rounded-full bg-dark-lighter flex items-center justify-center text-white text-xs">
+                                        N10
+                                    </div>
+                                </div>
+                                <div class="absolute bottom-0 left-1/4 transform -translate-x-1/2 translate-y-1/2">
+                                    <div class="w-8 h-8 rounded-full bg-dark-lighter flex items-center justify-center text-white text-xs">
+                                        N11
+                                    </div>
+                                </div>
+                                <div class="absolute top-1/2 left-0 transform -translate-x-1/2 -translate-y-1/2">
+                                    <div class="w-8 h-8 rounded-full bg-dark-lighter flex items-center justify-center text-white text-xs">
+                                        N12
+                                    </div>
+                                </div>
+                                
+                                <!-- 连接线 (简化表示) -->
+                                <svg class="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+                                    <!-- 中心到第一层 -->
+                                    <line x1="50%" y1="50%" x2="50%" y2="12.5%" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="50%" y1="50%" x2="87.5%" y2="25%" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="50%" y1="50%" x2="87.5%" y2="75%" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="50%" y1="50%" x2="50%" y2="87.5%" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="50%" y1="50%" x2="12.5%" y2="75%" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="50%" y1="50%" x2="12.5%" y2="25%" stroke="#3b82f6" stroke-width="1" stroke-dasharray="2,2" />
+                                    
+                                    <!-- 第一层到第二层 -->
+                                    <line x1="50%" y1="12.5%" x2="25%" y2="12.5%" stroke="#6366f1" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="50%" y1="12.5%" x2="75%" y2="12.5%" stroke="#6366f1" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="87.5%" y1="25%" x2="87.5%" y2="50%" stroke="#6366f1" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="87.5%" y1="75%" x2="75%" y2="87.5%" stroke="#6366f1" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="50%" y1="87.5%" x2="25%" y2="87.5%" stroke="#6366f1" stroke-width="1" stroke-dasharray="2,2" />
+                                    <line x1="12.5%" y1="75%" x2="12.5%" y2="50%" stroke="#6366f1" stroke-width="1" stroke-dasharray="2,2" />
+                                </svg>
+                            </div>
+                        </div>
+                        
+                        <!-- 图例 -->
+                        <div class="absolute bottom-0 left-0 flex space-x-4">
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-accent mr-1"></div>
+                                <span class="text-xs">控制端</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-success mr-1"></div>
+                                <span class="text-xs">被控端</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-warning mr-1"></div>
+                                <span class="text-xs">中继节点</span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="w-3 h-3 rounded-full bg-dark-lighter mr-1"></div>
+                                <span class="text-xs">其他节点</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 右侧状态面板 -->
+        <aside class="w-80 bg-secondary border-l border-dark-lighter flex flex-col">
+            <!-- 面板标题 -->
+            <div class="p-4 border-b border-dark-lighter">
+                <h3 class="font-bold text-white">系统状态</h3>
+            </div>
+
+            <!-- 系统信息 -->
+            <div class="p-4 border-b border-dark-lighter">
+                <h4 class="text-sm font-medium text-gray-400 mb-3">系统信息</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm">操作系统</span>
+                        <span class="text-sm font-medium">Windows 10</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">CPU</span>
+                        <span class="text-sm font-medium">Intel i7-9700K</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">内存</span>
+                        <span class="text-sm font-medium">16GB DDR4</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">存储</span>
+                        <span class="text-sm font-medium">512GB SSD</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 网络信息 -->
+            <div class="p-4 border-b border-dark-lighter">
+                <h4 class="text-sm font-medium text-gray-400 mb-3">网络信息</h4>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm">IPv4</span>
+                        <span class="text-sm font-medium">192.168.1.5</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">IPv6</span>
+                        <span class="text-sm font-medium">2001:db8::1</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">公网IP</span>
+                        <span class="text-sm font-medium">203.0.113.1</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">NAT类型</span>
+                        <span class="text-sm font-medium text-warning">对称型</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 通证信息 -->
+            <div class="p-4 border-b border-dark-lighter">
+                <h4 class="text-sm font-medium text-gray-400 mb-3">通证信息</h4>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-sm">余额</span>
+                        <span class="text-sm font-medium">1,248.5 NEXUS</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">今日收入</span>
+                        <span class="text-sm font-medium text-success">+15.2 NEXUS</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">今日支出</span>
+                        <span class="text-sm font-medium text-danger">-8.7 NEXUS</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">信誉评分</span>
+                        <span class="text-sm font-medium">95/100</span>
+                    </div>
+                    <div class="mt-4">
+                        <button class="w-full py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-blue-600 transition-colors">
+                            管理通证
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近活动 -->
+            <div class="flex-1 overflow-y-auto scrollbar-thin">
+                <div class="p-4">
+                    <h4 class="text-sm font-medium text-gray-400 mb-3">最近活动</h4>
+                    <div class="space-y-3">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-success bg-opacity-20 flex items-center justify-center mr-3 mt-1">
+                                <i class="fa fa-connectdevelop text-success"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">成功连接到 <span class="font-medium">家用笔记本</span></p>
+                                <p class="text-xs text-gray-400">5分钟前</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-warning bg-opacity-20 flex items-center justify-center mr-3 mt-1">
+                                <i class="fa fa-exclamation-triangle text-warning"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">文件服务器 <span class="font-medium">CPU使用率过高</span></p>
+                                <p class="text-xs text-gray-400">15分钟前</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3 mt-1">
+                                <i class="fa fa-exchange text-accent"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">收到 <span class="font-medium">15.2 NEXUS</span> 中继奖励</p>
+                                <p class="text-xs text-gray-400">30分钟前</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-danger bg-opacity-20 flex items-center justify-center mr-3 mt-1">
+                                <i class="fa fa-times-circle text-danger"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">与 <span class="font-medium">移动设备</span> 的连接断开</p>
+                                <p class="text-xs text-gray-400">1小时前</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 rounded-full bg-success bg-opacity-20 flex items-center justify-center mr-3 mt-1">
+                                <i class="fa fa-desktop text-success"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm">远程控制 <span class="font-medium">办公室电脑</span> 结束</p>
+                                <p class="text-xs text-gray-400">2小时前</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // 背景动画
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            document.getElementById('animationBackground').appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            let points = [];
+            let mouseX = 0;
+            let mouseY = 0;
+
+            // 创建初始点阵
+            for (let i = 0; i < 100; i++) {
+                points.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    speedX: (Math.random() - 0.5) * 0.5,
+                    speedY: (Math.random() - 0.5) * 0.5
+                });
+            }
+
+            // 鼠标移动监听
+            document.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+            });
+
+            // 动画循环
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 0.5;
+            
+                for (let i = 0; i < points.length; i++) {
+                    const point = points[i];
+                
+                    // 更新点的位置
+                    point.x += point.speedX;
+                    point.y += point.speedY;
+                
+                    // 边界检查
+                    if (point.x < 0 || point.x > canvas.width) point.speedX *= -1;
+                    if (point.y < 0 || point.y > canvas.height) point.speedY *= -1;
+                
+                    // 绘制点
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fill();
+                
+                    // 绘制连接线
+                    for (let j = i + 1; j < points.length; j++) {
+                        const otherPoint = points[j];
+                        const distance = Math.sqrt(
+                            Math.pow(point.x - otherPoint.x, 2) + 
+                            Math.pow(point.y - otherPoint.y, 2)
+                        );
+                    
+                        if (distance < 100) {
+                            ctx.beginPath();
+                            ctx.moveTo(point.x, point.y);
+                            ctx.lineTo(otherPoint.x, otherPoint.y);
+                            ctx.stroke();
+                        }
+                    }
+                
+                    // 鼠标交互 - 让点轻微向鼠标位置偏移
+                    const mouseDistance = Math.sqrt(
+                        Math.pow(point.x - mouseX, 2) + 
+                        Math.pow(point.y - mouseY, 2)
+                    );
+                
+                    if (mouseDistance < 150) {
+                        const angle = Math.atan2(mouseY - point.y, mouseX - point.x);
+                        point.x += Math.cos(angle) * 0.2;
+                        point.y += Math.sin(angle) * 0.2;
+                    }
+                }
+            
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+
+            // 窗口大小调整
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        });
+
+        // 图表初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 通证趋势图表
+            const tokenCtx = document.getElementById('tokenChart').getContext('2d');
+            const tokenChart = new Chart(tokenCtx, {
+                type: 'line',
+                data: {
+                    labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                    datasets: [{
+                        label: '通证余额',
+                        data: [1120, 1150, 1180, 1160, 1200, 1220, 1248.5],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        },
+                        y: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 网络性能图表
+            const networkCtx = document.getElementById('networkChart').getContext('2d');
+            const networkChart = new Chart(networkCtx, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'],
+                    datasets: [{
+                        label: '延迟 (ms)',
+                        data: [15, 12, 10, 18, 25, 15, 12, 12],
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y'
+                    }, {
+                        label: '带宽 (Mbps)',
+                        data: [45, 50, 55, 40, 35, 45, 50, 50],
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#94a3b8'
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            title: {
+                                display: true,
+                                text: '延迟 (ms)',
+                                color: '#94a3b8'
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: {
+                                drawOnChartArea: false,
+                            },
+                            ticks: {
+                                color: '#94a3b8'
+                            },
+                            title: {
+                                display: true,
+                                text: '带宽 (Mbps)',
+                                color: '#94a3b8'
+                            }
+                        }
+                    }
+                }
+            });
+        });
+
+        // 模拟数据更新
+        setInterval(() => {
+            // 随机更新在线设备数量
+            const onlineDevices = Math.floor(Math.random() * 3) + 4; // 4-6台在线设备
+            document.querySelectorAll('.text-xs.px-2.py-1.rounded-full.bg-success.bg-opacity-20.text-success').forEach(el => {
+                if (Math.random() > 0.8) {
+                    el.textContent = '离线';
+                    el.classList.remove('bg-success', 'bg-opacity-20', 'text-success');
+                    el.classList.add('bg-danger', 'bg-opacity-20', 'text-danger');
+                } else {
+                    el.textContent = '在线';
+                    el.classList.remove('bg-danger', 'bg-opacity-20', 'text-danger');
+                    el.classList.add('bg-success', 'bg-opacity-20', 'text-success');
+                }
+            });
+        }, 10000);
+    </script>
+</body>
+</html>

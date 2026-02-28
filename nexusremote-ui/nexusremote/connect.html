@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusRemote - 设备连接</title>
+    <!-- Tailwind CSS v3 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0f172a',
+                        secondary: '#1e293b',
+                        accent: '#3b82f6',
+                        highlight: '#6366f1',
+                        success: '#10b981',
+                        warning: '#f59e0b',
+                        danger: '#ef4444',
+                        dark: '#0f172a',
+                        'dark-light': '#1e293b',
+                        'dark-lighter': '#334155'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    animation: {
+                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'float': 'float 3s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+            .text-glow {
+                text-shadow: 0 0 10px rgba(99, 102, 241, 0.7);
+            }
+            .bg-grid {
+                background-image: 
+                    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+                background-size: 20px 20px;
+            }
+            .scrollbar-thin {
+                scrollbar-width: thin;
+            }
+            .scrollbar-thin::-webkit-scrollbar {
+                width: 5px;
+            }
+            .scrollbar-thin::-webkit-scrollbar-track {
+                background: rgba(15, 23, 42, 0.1);
+            }
+            .scrollbar-thin::-webkit-scrollbar-thumb {
+                background: rgba(99, 102, 241, 0.5);
+                border-radius: 5px;
+            }
+            .device-card {
+                transition: all 0.3s ease;
+            }
+            .device-card:hover {
+                transform: translateY(-5px);
+                box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(59, 130, 246, 0.1);
+            }
+            .device-card.active {
+                border-color: #3b82f6;
+                box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            }
+            .toggle-switch {
+                position: relative;
+                display: inline-block;
+                width: 50px;
+                height: 24px;
+            }
+            .toggle-switch input {
+                opacity: 0;
+                width: 0;
+                height: 0;
+            }
+            .toggle-slider {
+                position: absolute;
+                cursor: pointer;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-color: #334155;
+                transition: .4s;
+                border-radius: 34px;
+            }
+            .toggle-slider:before {
+                position: absolute;
+                content: "";
+                height: 18px;
+                width: 18px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                transition: .4s;
+                border-radius: 50%;
+            }
+            input:checked + .toggle-slider {
+                background-color: #3b82f6;
+            }
+            input:checked + .toggle-slider:before {
+                transform: translateX(26px);
+            }
+        }
+    </style>
+</head>
+<body class="bg-primary text-gray-200 min-h-screen flex flex-col">
+    <!-- 背景动画层 -->
+    <div id="animationBackground" class="fixed inset-0 pointer-events-none opacity-20 z-0"></div>
+
+    <!-- 主容器 -->
+    <div class="flex h-screen overflow-hidden relative z-10">
+        <!-- 左侧导航栏 -->
+        <aside class="w-64 bg-secondary border-r border-dark-lighter flex flex-col">
+            <!-- Logo -->
+            <div class="p-4 border-b border-dark-lighter flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-lg bg-accent flex items-center justify-center">
+                    <i class="fa fa-connectdevelop text-white text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-white">NexusRemote</h1>
+                    <p class="text-xs text-gray-400">v3.0 Final</p>
+                </div>
+            </div>
+
+            <!-- 导航菜单 -->
+            <nav class="flex-1 overflow-y-auto scrollbar-thin py-4">
+                <ul class="space-y-1 px-2">
+                    <li>
+                        <a href="index.html" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-tachometer w-5 text-center"></i>
+                            <span>仪表盘</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="connect.html" class="flex items-center space-x-3 px-4 py-3 rounded-lg bg-accent bg-opacity-20 text-white">
+                            <i class="fa fa-desktop w-5 text-center"></i>
+                            <span>远程控制</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-sitemap w-5 text-center"></i>
+                            <span>网络节点</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-exchange w-5 text-center"></i>
+                            <span>通证管理</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-shield w-5 text-center"></i>
+                            <span>安全中心</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#" class="flex items-center space-x-3 px-4 py-3 rounded-lg hover:bg-dark-lighter transition-colors">
+                            <i class="fa fa-cogs w-5 text-center"></i>
+                            <span>系统设置</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="mt-8 px-4">
+                    <h3 class="text-xs uppercase text-gray-500 font-semibold mb-2">节点状态</h3>
+                    <div class="bg-dark-lighter rounded-lg p-3">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm">当前角色</span>
+                            <span class="text-xs px-2 py-1 rounded-full bg-success bg-opacity-20 text-success">控制端</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm">网络状态</span>
+                            <span class="text-xs px-2 py-1 rounded-full bg-success bg-opacity-20 text-success">已连接</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">NAT 类型</span>
+                            <span class="text-xs px-2 py-1 rounded-full bg-warning bg-opacity-20 text-warning">对称型</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- 用户信息 -->
+            <div class="p-4 border-t border-dark-lighter">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 flex items-center justify-center text-white font-bold">
+                        U
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-white">用户001</p>
+                        <p class="text-xs text-gray-400">信誉: 95/100</p>
+                    </div>
+                    <button class="text-gray-400 hover:text-white">
+                        <i class="fa fa-cog"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 flex flex-col overflow-hidden bg-grid">
+            <!-- 顶部导航栏 -->
+            <header class="h-16 bg-secondary border-b border-dark-lighter flex items-center justify-between px-6">
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-400 hover:text-white">
+                        <i class="fa fa-bars"></i>
+                    </button>
+                    <div class="relative">
+                        <input type="text" placeholder="搜索设备..." class="bg-dark-lighter text-gray-300 rounded-lg pl-10 pr-4 py-2 w-64 focus:outline-none focus:ring-2 focus:ring-accent">
+                        <i class="fa fa-search absolute left-3 top-3 text-gray-500"></i>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="relative text-gray-400 hover:text-white">
+                        <i class="fa fa-bell"></i>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-danger rounded-full"></span>
+                    </button>
+                    <button class="relative text-gray-400 hover:text-white">
+                        <i class="fa fa-envelope"></i>
+                        <span class="absolute top-0 right-0 w-2 h-2 bg-danger rounded-full"></span>
+                    </button>
+                    <div class="h-6 w-px bg-dark-lighter mx-2"></div>
+                    <div class="flex items-center space-x-2">
+                        <div class="w-2 h-2 bg-success rounded-full"></div>
+                        <span class="text-sm">在线</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- 内容区域 -->
+            <div class="flex-1 overflow-y-auto scrollbar-thin p-6">
+                <div class="mb-6">
+                    <h2 class="text-2xl font-bold text-white mb-2">设备连接</h2>
+                    <p class="text-gray-400">选择要连接的设备或添加新设备</p>
+                </div>
+
+                <!-- 连接设置选项卡 -->
+                <div class="bg-secondary rounded-lg mb-6">
+                    <div class="border-b border-dark-lighter">
+                        <div class="flex">
+                            <button class="px-6 py-4 text-white font-medium border-b-2 border-accent">设备管理</button>
+                            <button class="px-6 py-4 text-gray-400 font-medium hover:text-white transition-colors">连接设置</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 设备列表 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                    <!-- 设备卡片 1 -->
+                    <div class="bg-secondary rounded-lg p-5 border border-dark-lighter device-card active">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-4">
+                                    <i class="fa fa-desktop text-accent text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white">办公室电脑</h3>
+                                    <p class="text-sm text-gray-400">Windows 10 Pro</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="space-y-3 mb-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">IP地址</span>
+                                <span>192.168.1.100</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">状态</span>
+                                <span class="text-success">在线</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">延迟</span>
+                                <span>12ms</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">最后活动</span>
+                                <span>刚刚</span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="flex-1 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-blue-600 transition-colors flex items-center justify-center">
+                                <i class="fa fa-desktop mr-2"></i>
+                                <span>连接</span>
+                            </button>
+                            <button class="py-2 px-3 rounded-lg bg-dark-lighter text-gray-300 hover:bg-dark-light transition-colors">
+                                <i class="fa fa-cog"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 设备卡片 2 -->
+                    <div class="bg-secondary rounded-lg p-5 border border-dark-lighter device-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-4">
+                                    <i class="fa fa-laptop text-accent text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white">家用笔记本</h3>
+                                    <p class="text-sm text-gray-400">macOS Big Sur</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="space-y-3 mb-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">IP地址</span>
+                                <span>192.168.1.105</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">状态</span>
+                                <span class="text-success">在线</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">延迟</span>
+                                <span>18ms</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">最后活动</span>
+                                <span>5分钟前</span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="flex-1 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-blue-600 transition-colors flex items-center justify-center">
+                                <i class="fa fa-desktop mr-2"></i>
+                                <span>连接</span>
+                            </button>
+                            <button class="py-2 px-3 rounded-lg bg-dark-lighter text-gray-300 hover:bg-dark-light transition-colors">
+                                <i class="fa fa-cog"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 设备卡片 3 -->
+                    <div class="bg-secondary rounded-lg p-5 border border-dark-lighter device-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-4">
+                                    <i class="fa fa-server text-accent text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white">文件服务器</h3>
+                                    <p class="text-sm text-gray-400">Ubuntu Server 20.04</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="space-y-3 mb-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">IP地址</span>
+                                <span>192.168.1.200</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">状态</span>
+                                <span class="text-warning">需注意</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">延迟</span>
+                                <span>8ms</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">最后活动</span>
+                                <span>1小时前</span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="flex-1 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-blue-600 transition-colors flex items-center justify-center">
+                                <i class="fa fa-desktop mr-2"></i>
+                                <span>连接</span>
+                            </button>
+                            <button class="py-2 px-3 rounded-lg bg-dark-lighter text-gray-300 hover:bg-dark-light transition-colors">
+                                <i class="fa fa-cog"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 设备卡片 4 -->
+                    <div class="bg-secondary rounded-lg p-5 border border-dark-lighter device-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-4">
+                                    <i class="fa fa-tablet text-accent text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white">平板设备</h3>
+                                    <p class="text-sm text-gray-400">iPadOS 15</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="space-y-3 mb-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">IP地址</span>
+                                <span>192.168.1.110</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">状态</span>
+                                <span class="text-success">在线</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">延迟</span>
+                                <span>25ms</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">最后活动</span>
+                                <span>30分钟前</span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="flex-1 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-blue-600 transition-colors flex items-center justify-center">
+                                <i class="fa fa-desktop mr-2"></i>
+                                <span>连接</span>
+                            </button>
+                            <button class="py-2 px-3 rounded-lg bg-dark-lighter text-gray-300 hover:bg-dark-light transition-colors">
+                                <i class="fa fa-cog"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 设备卡片 5 -->
+                    <div class="bg-secondary rounded-lg p-5 border border-dark-lighter device-card">
+                        <div class="flex justify-between items-start mb-4">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-4">
+                                    <i class="fa fa-mobile text-accent text-xl"></i>
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white">移动设备</h3>
+                                    <p class="text-sm text-gray-400">Android 12</p>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        <div class="space-y-3 mb-4">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">IP地址</span>
+                                <span>192.168.1.115</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">状态</span>
+                                <span class="text-success">在线</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">延迟</span>
+                                <span>32ms</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-400">最后活动</span>
+                                <span>15分钟前</span>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="flex-1 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-blue-600 transition-colors flex items-center justify-center">
+                                <i class="fa fa-desktop mr-2"></i>
+                                <span>连接</span>
+                            </button>
+                            <button class="py-2 px-3 rounded-lg bg-dark-lighter text-gray-300 hover:bg-dark-light transition-colors">
+                                <i class="fa fa-cog"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 添加设备卡片 -->
+                    <div class="bg-secondary rounded-lg p-5 border border-dashed border-dark-lighter flex flex-col items-center justify-center text-center h-full min-h-[250px] cursor-pointer hover:border-accent transition-colors">
+                        <div class="w-16 h-16 rounded-full bg-accent bg-opacity-10 flex items-center justify-center mb-4">
+                            <i class="fa fa-plus text-accent text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-white text-lg mb-2">添加新设备</h3>
+                        <p class="text-sm text-gray-400 mb-4">连接到新的远程设备</p>
+                        <button class="px-4 py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-blue-600 transition-colors">
+                            开始添加
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 连接历史 -->
+                <div class="bg-secondary rounded-lg p-5">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="font-bold text-white">连接历史</h3>
+                        <button class="text-xs px-3 py-1 rounded-full bg-dark-lighter hover:bg-dark-light transition-colors">
+                            查看全部
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-left text-gray-400 border-b border-dark-lighter">
+                                    <th class="pb-3 font-medium">设备名称</th>
+                                    <th class="pb-3 font-medium">连接时间</th>
+                                    <th class="pb-3 font-medium">持续时间</th>
+                                    <th class="pb-3 font-medium">网络质量</th>
+                                    <th class="pb-3 font-medium">费用</th>
+                                    <th class="pb-3 font-medium">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr class="border-b border-dark-lighter">
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3">
+                                                <i class="fa fa-desktop text-accent"></i>
+                                            </div>
+                                            <span>办公室电脑</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">今天 14:30</td>
+                                    <td class="py-3">1小时20分钟</td>
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-24 h-2 bg-dark-lighter rounded-full overflow-hidden mr-2">
+                                                <div class="h-full bg-success rounded-full" style="width: 90%"></div>
+                                            </div>
+                                            <span>优秀</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">2.5 NEXUS</td>
+                                    <td class="py-3">
+                                        <button class="text-accent hover:text-blue-400">
+                                            <i class="fa fa-history"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr class="border-b border-dark-lighter">
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3">
+                                                <i class="fa fa-laptop text-accent"></i>
+                                            </div>
+                                            <span>家用笔记本</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">昨天 19:15</td>
+                                    <td class="py-3">45分钟</td>
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-24 h-2 bg-dark-lighter rounded-full overflow-hidden mr-2">
+                                                <div class="h-full bg-warning rounded-full" style="width: 70%"></div>
+                                            </div>
+                                            <span>良好</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">1.8 NEXUS</td>
+                                    <td class="py-3">
+                                        <button class="text-accent hover:text-blue-400">
+                                            <i class="fa fa-history"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3">
+                                                <i class="fa fa-server text-accent"></i>
+                                            </div>
+                                            <span>文件服务器</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">前天 10:45</td>
+                                    <td class="py-3">3小时10分钟</td>
+                                    <td class="py-3">
+                                        <div class="flex items-center">
+                                            <div class="w-24 h-2 bg-dark-lighter rounded-full overflow-hidden mr-2">
+                                                <div class="h-full bg-success rounded-full" style="width: 95%"></div>
+                                            </div>
+                                            <span>优秀</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-3">5.2 NEXUS</td>
+                                    <td class="py-3">
+                                        <button class="text-accent hover:text-blue-400">
+                                            <i class="fa fa-history"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 右侧状态面板 -->
+        <aside class="w-80 bg-secondary border-l border-dark-lighter flex flex-col">
+            <!-- 面板标题 -->
+            <div class="p-4 border-b border-dark-lighter">
+                <h3 class="font-bold text-white">连接详情</h3>
+            </div>
+
+            <!-- 设备信息 -->
+            <div class="p-4 border-b border-dark-lighter">
+                <div class="flex items-center mb-4">
+                    <div class="w-12 h-12 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-4">
+                        <i class="fa fa-desktop text-accent text-xl"></i>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-white">办公室电脑</h4>
+                        <p class="text-sm text-gray-400">Windows 10 Pro</p>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-400">IP地址</span>
+                        <span class="text-sm">192.168.1.100</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-400">MAC地址</span>
+                        <span class="text-sm">00:1B:44:11:3A:B7</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-400">CPU</span>
+                        <span class="text-sm">Intel i7-9700K</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-400">内存</span>
+                        <span class="text-sm">16GB DDR4</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-400">分辨率</span>
+                        <span class="text-sm">1920x1080</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 连接状态 -->
+            <div class="p-4 border-b border-dark-lighter">
+                <h4 class="text-sm font-medium text-gray-400 mb-3">连接状态</h4>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-sm">状态</span>
+                        <span class="text-sm font-medium text-success">已连接</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">连接时间</span>
+                        <span class="text-sm font-medium">00:15:42</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">延迟</span>
+                        <span class="text-sm font-medium">12ms</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">带宽</span>
+                        <span class="text-sm font-medium">50Mbps</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">丢包率</span>
+                        <span class="text-sm font-medium">0.1%</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm">费用</span>
+                        <span class="text-sm font-medium">0.8 NEXUS</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 连接设置 -->
+            <div class="p-4 border-b border-dark-lighter">
+                <h4 class="text-sm font-medium text-gray-400 mb-3">连接设置</h4>
+                <div class="space-y-4">
+                    <div>
+                        <label class="flex justify-between text-sm mb-1">
+                            <span>视频质量</span>
+                            <span>高</span>
+                        </label>
+                        <input type="range" min="1" max="100" value="80" class="w-full h-2 bg-dark-lighter rounded-lg appearance-none cursor-pointer accent-accent">
+                    </div>
+                    <div>
+                        <label class="flex justify-between text-sm mb-1">
+                            <span>帧率</span>
+                            <span>60 FPS</span>
+                        </label>
+                        <input type="range" min="1" max="100" value="60" class="w-full h-2 bg-dark-lighter rounded-lg appearance-none cursor-pointer accent-accent">
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">音频传输</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">远程打印</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm">文件传输</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="p-4">
+                <button class="w-full py-3 rounded-lg bg-danger text-white text-sm font-medium hover:bg-red-600 transition-colors mb-3 flex items-center justify-center">
+                    <i class="fa fa-power-off mr-2"></i>
+                    <span>断开连接</span>
+                </button>
+                <div class="grid grid-cols-3 gap-2">
+                    <button class="py-2 rounded-lg bg-dark-lighter text-gray-300 hover:bg-dark-light transition-colors flex flex-col items-center">
+                        <i class="fa fa-file-transfer text-lg mb-1"></i>
+                        <span class="text-xs">文件</span>
+                    </button>
+                    <button class="py-2 rounded-lg bg-dark-lighter text-gray-300 hover:bg-dark-light transition-colors flex flex-col items-center">
+                        <i class="fa fa-keyboard text-lg mb-1"></i>
+                        <span class="text-xs">键盘</span>
+                    </button>
+                    <button class="py-2 rounded-lg bg-dark-lighter text-gray-300 hover:bg-dark-light transition-colors flex flex-col items-center">
+                        <i class="fa fa-cog text-lg mb-1"></i>
+                        <span class="text-xs">设置</span>
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // 背景动画
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            document.getElementById('animationBackground').appendChild(canvas);
+
+            const ctx = canvas.getContext('2d');
+            let points = [];
+            let mouseX = 0;
+            let mouseY = 0;
+
+            // 创建初始点阵
+            for (let i = 0; i < 100; i++) {
+                points.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: Math.random() * 2 + 1,
+                    speedX: (Math.random() - 0.5) * 0.5,
+                    speedY: (Math.random() - 0.5) * 0.5
+                });
+            }
+
+            // 鼠标移动监听
+            document.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                mouseX = e.clientX - rect.left;
+                mouseY = e.clientY - rect.top;
+            });
+
+            // 动画循环
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#3b82f6';
+                ctx.lineWidth = 0.5;
+            
+                for (let i = 0; i < points.length; i++) {
+                    const point = points[i];
+                
+                    // 更新点的位置
+                    point.x += point.speedX;
+                    point.y += point.speedY;
+                
+                    // 边界检查
+                    if (point.x < 0 || point.x > canvas.width) point.speedX *= -1;
+                    if (point.y < 0 || point.y > canvas.height) point.speedY *= -1;
+                
+                    // 绘制点
+                    ctx.beginPath();
+                    ctx.arc(point.x, point.y, point.size, 0, Math.PI * 2);
+                    ctx.fillStyle = '#3b82f6';
+                    ctx.fill();
+                
+                    // 绘制连接线
+                    for (let j = i + 1; j < points.length; j++) {
+                        const otherPoint = points[j];
+                        const distance = Math.sqrt(
+                            Math.pow(point.x - otherPoint.x, 2) + 
+                            Math.pow(point.y - otherPoint.y, 2)
+                        );
+                    
+                        if (distance < 100) {
+                            ctx.beginPath();
+                            ctx.moveTo(point.x, point.y);
+                            ctx.lineTo(otherPoint.x, otherPoint.y);
+                            ctx.stroke();
+                        }
+                    }
+                
+                    // 鼠标交互 - 让点轻微向鼠标位置偏移
+                    const mouseDistance = Math.sqrt(
+                        Math.pow(point.x - mouseX, 2) + 
+                        Math.pow(point.y - mouseY, 2)
+                    );
+                
+                    if (mouseDistance < 150) {
+                        const angle = Math.atan2(mouseY - point.y, mouseX - point.x);
+                        point.x += Math.cos(angle) * 0.2;
+                        point.y += Math.sin(angle) * 0.2;
+                    }
+                }
+            
+                requestAnimationFrame(animate);
+            }
+
+            animate();
+
+            // 窗口大小调整
+            window.addEventListener('resize', () => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        });
+
+        // 设备卡片交互
+        document.addEventListener('DOMContentLoaded', function() {
+            const deviceCards = document.querySelectorAll('.device-card');
+            
+            deviceCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    // 移除其他卡片的active类
+                    deviceCards.forEach(c => c.classList.remove('active'));
+                    // 添加当前卡片的active类
+                    this.classList.add('active');
+                });
+            });
+
+            // 连接按钮点击事件
+            const connectButtons = document.querySelectorAll('.device-card button:first-child');
+            connectButtons.forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.stopPropagation(); // 阻止事件冒泡
+                    alert('正在连接到设备...');
+                });
+            });
+
+            // 添加设备卡片点击事件
+            const addDeviceCard = document.querySelector('.cursor-pointer');
+            addDeviceCard.addEventListener('click', function() {
+                alert('打开添加设备向导...');
+            });
+
+            // 断开连接按钮点击事件
+            const disconnectButton = document.querySelector('.bg-danger');
+            disconnectButton.addEventListener('click', function() {
+                alert('正在断开连接...');
+            });
+        });
+    </script>
+</body>
+</html>

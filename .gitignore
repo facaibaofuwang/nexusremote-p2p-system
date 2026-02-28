@@ -1,0 +1,72 @@
+# GitHub 配置文件（包含敏感信息）
+github-config.json
+
+# Node.js
+node_modules/
+npm-debug.log*
+package-lock.json
+yarn.lock
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Logs
+*.log
+logs/
+**/*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Git credentials
+.git-credentials
+
+# Build artifacts
+**/target/
+**/dist/
+**/build/
+
+# Test files
+**/*.test
+**/test_*
+
+# Temporary files
+*.tmp
+*.temp
+
+# NexusRemote specific
+nexusremote/target/
+nexusremote-backend/.venv/
+nexusremote-frontend/node_modules/
+nexusremote-frontend/dist/
+openclaw-model-config-ui/node_modules/
+memory/
+*.pid
+*.pid.lock
