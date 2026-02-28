@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NexusRemote 集成测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #0f172a; color: white; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .status { padding: 20px; margin: 10px 0; border-radius: 8px; }
+        .connected { background: #10b981; }
+        .disconnected { background: #ef4444; }
+        .connecting { background: #f59e0b; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; cursor: pointer; }
+        .connect-btn { background: #3b82f6; color: white; }
+        .test-btn { background: #6366f1; color: white; }
+        .log { background: #1e293b; padding: 15px; border-radius: 8px; margin-top: 20px; max-height: 300px; overflow-y: auto; }
+        .log-entry { margin: 5px 0; padding: 5px; border-left: 3px solid #3b82f6; }
+        .success { border-left-color: #10b981; }
+        .error { border-left-color: #ef4444; }
+        .info { border-left-color: #3b82f6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔗 NexusRemote 前后端集成测试</h1>
+        
+        <div class="status disconnected" id="status">
+            <h2>状态: <span id="status-text">未连接</span></h2>
+            <p>Rust WebSocket服务器: ws://localhost:8081</p>
+            <p>前端服务器: http://localhost:3000</p>
+            <p>Python后端: http://localhost:5000</p>
+        </div>
+        
+        <div>
+            <button class="connect-btn" onclick="connectWebSocket()">连接 WebSocket</button>
+            <button class="test-btn" onclick="testConnection()">测试连接</button>
+            <button class="test-btn" onclick="testFullIntegration()">完整集成测试</button>
+        </div>
+        
+        <div class="log" id="log">
+            <h3>测试日志</h3>
+            <div id="log-entries"></div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h3>服务状态</h3>
+            <div id="service-status"></div>
+        </div>
+    </div>
+    
+    <script>
+        let ws = null;
+        let clientId = null;
+        
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `[${new Date().toLocaleTimeString()}] ${message}`;
+            document.getElementById('log-entries').appendChild(entry);
+            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+        }
+        
+        function updateStatus(status, isConnected = false) {
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            
+            statusText.textContent = status;
+            statusDiv.className = 'status ' + (isConnected ? 'connected' : 'disconnected');
+            
+            if (status === '连接中...') {
+                statusDiv.className = 'status connecting';
+            }
+        }
+        
+        function connectWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.close();
+                updateStatus('未连接', false);
+                log('已断开WebSocket连接', 'info');
+                return;
+            }
+            
+            updateStatus('连接中...', false);
+            log('正在连接 ws://localhost:8081 ...', 'info');
+            
+            try {
+                ws = new WebSocket('ws://localhost:8081');
+                
+                ws.onopen = function(event) {
+                    updateStatus('已连接', true);
+                    log('✅ WebSocket连接成功', 'success');
+                };
+                
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        log(`📨 收到消息: ${data.type}`, 'info');
+                        
+                        switch(data.type) {
+                            case 'welcome':
+                                clientId = data.client_id;
+                                log(`客户端ID: ${clientId}`, 'success');
+                                break;
+                            case 'pong':
+                                log(`🏓 心跳响应: ${new Date(data.timestamp * 1000).toLocaleTimeString()}`, 'success');
+                                break;
+                            case 'routing_stats':
+                                log(`📊 路由统计: ${data.total_peers}个节点, ${data.expected_advantage}x优势`, 'success');
+                                break;
+                            case 'command_result':
+                                log(`🎯 命令结果: ${data.command} → ${data.status}`, 'success');
+                                break;
+                        }
+                    } catch (e) {
+                        log(`❌ 解析消息失败: ${e.message}`, 'error');
+                    }
+                };
+                
+                ws.onerror = function(error) {
+                    log('❌ WebSocket连接错误', 'error');
+                    updateStatus('连接错误', false);
+                };
+                
+                ws.onclose = function(event) {
+                    log('🔌 WebSocket连接关闭', 'info');
+                    updateStatus('未连接', false);
+                    ws = null;
+                };
+                
+            } catch (error) {
+                log(`❌ 创建WebSocket失败: ${error.message}`, 'error');
+                updateStatus('连接失败', false);
+            }
+        }
+        
+        function testConnection() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('❌ 请先连接WebSocket', 'error');
+                return;
+            }
+            
+            // 发送ping
+            ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+            log('发送ping消息', 'info');
+            
+            // 获取路由统计
+            setTimeout(() => {
+                ws.send(JSON.stringify({ type: 'get_routing_stats' }));
+                log('请求路由统计', 'info');
+            }, 500);
+            
+            // 发送测试命令
+            setTimeout(() => {
+                ws.send(JSON.stringify({ 
+                    type: 'send_command', 
+                    command: 'test_integration', 
+                    target: 'test_device' 
+                }));
+                log('发送测试命令', 'info');
+            }, 1000);
+        }
+        
+        function testFullIntegration() {
+            log('🚀 开始完整集成测试...', 'info');
+            
+            // 测试前端服务器
+            fetch('http://localhost:3000/api/devices')
+                .then(response => response.json())
+                .then(data => {
+                    log(`✅ 前端API: 获取到${data.devices?.length || 0}个设备`, 'success');
+                })
+                .catch(error => {
+                    log(`❌ 前端API错误: ${error.message}`, 'error');
+                });
+            
+            // 测试Python后端
+            fetch('http://localhost:5000/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    log(`✅ Python后端: ${data.status}`, 'success');
+                })
+                .catch(error => {
+                    log(`❌ Python后端错误: ${error.message}`, 'error');
+                });
+            
+            // 测试加权路由算法
+            fetch('http://localhost:5000/api/routing/algorithm')
+                .then(response => response.json())
+                .then(data => {
+                    log(`✅ 加权路由算法: ${data.advantage_ratio}x优势`, 'success');
+                })
+                .catch(error => {
+                    log(`❌ 路由算法错误: ${error.message}`, 'error');
+                });
+            
+            // 测试WebSocket连接
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                testConnection();
+            } else {
+                log('⚠️ WebSocket未连接，跳过WebSocket测试', 'info');
+            }
+        }
+        
+        // 检查服务状态
+        function checkServices() {
+            const services = [
+                { name: '前端服务器', url: 'http://localhost:3000/api/devices' },
+                { name: 'Python后端', url: 'http://localhost:5000/api/health' },
+                { name: 'Rust WebSocket', url: null } // WebSocket需要特殊处理
+            ];
+            
+            const statusDiv = document.getElementById('service-status');
+            statusDiv.innerHTML = '';
+            
+            services.forEach(service => {
+                const div = document.createElement('div');
+                div.style.margin = '5px 0';
+                div.style.padding = '5px';
+                div.style.borderRadius = '4px';
+                div.style.backgroundColor = '#334155';
+                
+                if (service.url) {
+                    fetch(service.url)
+                        .then(response => {
+                            div.innerHTML = `✅ ${service.name}: 运行正常`;
+                            div.style.backgroundColor = '#065f46';
+                        })
+                        .catch(error => {
+                            div.innerHTML = `❌ ${service.name}: 无法连接`;
+                            div.style.backgroundColor = '#7f1d1d';
+                        });
+                } else {
+                    // 检查WebSocket服务器
+                    const testWs = new WebSocket('ws://localhost:8081');
+                    testWs.onopen = () => {
+                        div.innerHTML = `✅ ${service.name}: 运行正常`;
+                        div.style.backgroundColor = '#065f46';
+                        testWs.close();
+                    };
+                    testWs.onerror = () => {
+                        div.innerHTML = `❌ ${service.name}: 无法连接`;
+                        div.style.backgroundColor = '#7f1d1d';
+                    };
+                }
+                
+                statusDiv.appendChild(div);
+            });
+        }
+        
+        // 页面加载时检查服务状态
+        window.onload = function() {
+            log('页面加载完成', 'info');
+            setTimeout(checkServices, 1000);
+        };
+    </script>
+</body>
+</html>

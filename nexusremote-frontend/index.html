@@ -10,6 +10,8 @@
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <!-- NexusRemote Rust WebSocket Client -->
+    <script src="/js/rust-websocket-client.js"></script>
     <!-- Tailwind 配置 -->
     <script>
         tailwind.config = {
@@ -722,6 +724,37 @@
                 </div>
             </div>
 
+            <!-- Rust WebSocket 连接状态 -->
+            <div class="p-4 border-b border-dark-lighter">
+                <h4 class="text-sm font-medium text-gray-400 mb-3">Rust WebSocket 连接</h4>
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">服务器状态</span>
+                        <span id="rust-ws-status" class="text-xs px-2 py-1 rounded-full bg-danger bg-opacity-20 text-danger">未连接</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">连接地址</span>
+                        <span class="text-xs font-mono">ws://localhost:8081</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">客户端ID</span>
+                        <span id="rust-ws-client-id" class="text-xs font-mono truncate">-</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">最后心跳</span>
+                        <span id="rust-ws-last-ping" class="text-xs">-</span>
+                    </div>
+                    <div class="mt-3">
+                        <button id="rust-ws-connect-btn" class="w-full py-2 rounded-lg bg-accent text-white text-sm font-medium hover:bg-blue-600 transition-colors">
+                            连接 WebSocket
+                        </button>
+                        <button id="rust-ws-test-btn" class="w-full py-2 rounded-lg bg-dark-lighter text-white text-sm font-medium hover:bg-dark-light transition-colors mt-2">
+                            测试连接
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <!-- 最近活动 -->
             <div class="flex-1 overflow-y-auto scrollbar-thin">
                 <div class="p-4">
@@ -1024,6 +1057,233 @@
                 }
             });
         }, 10000);
+
+        // ============================================
+        // Rust WebSocket 集成
+        // ============================================
+        
+        let rustWebSocket = null;
+        let rustClientId = null;
+        let lastPingTime = null;
+
+        // 更新状态显示
+        function updateRustWsStatus(status, isConnected = false) {
+            const statusElement = document.getElementById('rust-ws-status');
+            const clientIdElement = document.getElementById('rust-ws-client-id');
+            const lastPingElement = document.getElementById('rust-ws-last-ping');
+            const connectBtn = document.getElementById('rust-ws-connect-btn');
+            
+            if (isConnected) {
+                statusElement.textContent = '已连接';
+                statusElement.className = 'text-xs px-2 py-1 rounded-full bg-success bg-opacity-20 text-success';
+                connectBtn.textContent = '断开连接';
+                connectBtn.classList.remove('bg-accent');
+                connectBtn.classList.add('bg-danger');
+            } else {
+                statusElement.textContent = status;
+                statusElement.className = 'text-xs px-2 py-1 rounded-full bg-danger bg-opacity-20 text-danger';
+                connectBtn.textContent = '连接 WebSocket';
+                connectBtn.classList.remove('bg-danger');
+                connectBtn.classList.add('bg-accent');
+            }
+            
+            if (rustClientId) {
+                clientIdElement.textContent = rustClientId;
+            }
+            
+            if (lastPingTime) {
+                lastPingElement.textContent = new Date(lastPingTime).toLocaleTimeString();
+            }
+        }
+
+        // 连接WebSocket
+        function connectRustWebSocket() {
+            if (rustWebSocket && rustWebSocket.readyState === WebSocket.OPEN) {
+                rustWebSocket.close();
+                return;
+            }
+            
+            updateRustWsStatus('连接中...', false);
+            
+            try {
+                rustWebSocket = new WebSocket('ws://localhost:8081');
+                
+                rustWebSocket.onopen = function(event) {
+                    console.log('✅ Rust WebSocket 连接成功');
+                    updateRustWsStatus('已连接', true);
+                };
+                
+                rustWebSocket.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('📨 收到Rust消息:', data);
+                        
+                        // 处理不同类型的消息
+                        switch(data.type) {
+                            case 'welcome':
+                                rustClientId = data.client_id;
+                                updateRustWsStatus('已连接', true);
+                                addActivityLog('Rust WebSocket', `连接成功，客户端ID: ${data.client_id.substring(0, 8)}...`);
+                                break;
+                                
+                            case 'pong':
+                                lastPingTime = Date.now();
+                                updateRustWsStatus('已连接', true);
+                                break;
+                                
+                            case 'peers':
+                                console.log('📊 对等节点列表:', data.peers.length, '个节点');
+                                addActivityLog('Rust DHT', `获取到 ${data.peers.length} 个对等节点`);
+                                break;
+                                
+                            case 'routing_stats':
+                                console.log('📈 路由统计:', data);
+                                updateRoutingStats(data);
+                                addActivityLog('Rust 路由', `加权路由优势: ${data.expected_advantage}x`);
+                                break;
+                                
+                            case 'command_result':
+                                console.log('🎯 命令结果:', data);
+                                addActivityLog('Rust 命令', `命令 "${data.command}" 已接收`);
+                                break;
+                                
+                            case 'error':
+                                console.error('❌ Rust错误:', data.message);
+                                addActivityLog('Rust 错误', data.message);
+                                break;
+                        }
+                    } catch (e) {
+                        console.error('解析消息失败:', e, event.data);
+                    }
+                };
+                
+                rustWebSocket.onerror = function(error) {
+                    console.error('❌ WebSocket错误:', error);
+                    updateRustWsStatus('连接错误', false);
+                    addActivityLog('Rust WebSocket', '连接错误');
+                };
+                
+                rustWebSocket.onclose = function(event) {
+                    console.log('🔌 WebSocket连接关闭');
+                    updateRustWsStatus('未连接', false);
+                    rustWebSocket = null;
+                    addActivityLog('Rust WebSocket', '连接已关闭');
+                };
+                
+            } catch (error) {
+                console.error('❌ 创建WebSocket失败:', error);
+                updateRustWsStatus('连接失败', false);
+                addActivityLog('Rust WebSocket', '连接失败: ' + error.message);
+            }
+        }
+
+        // 发送测试消息
+        function testRustWebSocket() {
+            if (!rustWebSocket || rustWebSocket.readyState !== WebSocket.OPEN) {
+                alert('请先连接WebSocket服务器');
+                return;
+            }
+            
+            // 发送ping消息
+            const pingMsg = {
+                type: 'ping',
+                timestamp: Date.now()
+            };
+            rustWebSocket.send(JSON.stringify(pingMsg));
+            addActivityLog('Rust 测试', '发送ping消息');
+            
+            // 获取路由统计
+            setTimeout(() => {
+                const statsMsg = {
+                    type: 'get_routing_stats'
+                };
+                rustWebSocket.send(JSON.stringify(statsMsg));
+                addActivityLog('Rust 测试', '请求路由统计');
+            }, 500);
+            
+            // 获取对等节点
+            setTimeout(() => {
+                const peersMsg = {
+                    type: 'get_peers',
+                    target_id: ''
+                };
+                rustWebSocket.send(JSON.stringify(peersMsg));
+                addActivityLog('Rust 测试', '请求对等节点列表');
+            }, 1000);
+            
+            // 发送测试命令
+            setTimeout(() => {
+                const commandMsg = {
+                    type: 'send_command',
+                    command: 'test_remote_control',
+                    target: 'test_device_001'
+                };
+                rustWebSocket.send(JSON.stringify(commandMsg));
+                addActivityLog('Rust 测试', '发送测试命令');
+            }, 1500);
+        }
+
+        // 更新路由统计显示
+        function updateRoutingStats(stats) {
+            // 这里可以更新UI显示路由统计信息
+            console.log('更新路由统计:', stats);
+            
+            // 示例：更新网络状态卡片
+            const networkStatusCard = document.querySelector('.bg-secondary.rounded-lg.p-5.border-l-4.border-success');
+            if (networkStatusCard) {
+                const nodeCountElement = networkStatusCard.querySelector('p.text-sm.font-medium.text-white:last-child');
+                if (nodeCountElement && stats.total_peers) {
+                    nodeCountElement.textContent = stats.total_peers;
+                }
+            }
+            
+            // 添加加权路由优势显示
+            const advantageInfo = `加权路由: ${stats.expected_advantage}x 优势 (高信誉节点选择率: ${(stats.simulation_data?.high_rep_selection_rate * 100 || 0).toFixed(1)}%)`;
+            addActivityLog('Rust 路由', advantageInfo);
+        }
+
+        // 添加活动日志
+        function addActivityLog(source, message) {
+            const activityContainer = document.querySelector('.space-y-3');
+            if (!activityContainer) return;
+            
+            const activityItem = document.createElement('div');
+            activityItem.className = 'flex items-start';
+            activityItem.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-accent bg-opacity-20 flex items-center justify-center mr-3 mt-1">
+                    <i class="fa fa-code text-accent"></i>
+                </div>
+                <div>
+                    <p class="text-sm"><span class="font-medium">${source}</span>: ${message}</p>
+                    <p class="text-xs text-gray-400">刚刚</p>
+                </div>
+            `;
+            
+            // 添加到顶部
+            activityContainer.insertBefore(activityItem, activityContainer.firstChild);
+            
+            // 限制最多显示10条
+            if (activityContainer.children.length > 10) {
+                activityContainer.removeChild(activityContainer.lastChild);
+            }
+        }
+
+        // 初始化事件监听
+        document.addEventListener('DOMContentLoaded', function() {
+            const connectBtn = document.getElementById('rust-ws-connect-btn');
+            const testBtn = document.getElementById('rust-ws-test-btn');
+            
+            if (connectBtn) {
+                connectBtn.addEventListener('click', connectRustWebSocket);
+            }
+            
+            if (testBtn) {
+                testBtn.addEventListener('click', testRustWebSocket);
+            }
+            
+            // 自动连接（可选）
+            // setTimeout(connectRustWebSocket, 2000);
+        });
     </script>
 </body>
 </html>

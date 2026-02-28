@@ -48,6 +48,11 @@ ring = "0.17"
 base64 = "0.21"
 hex = "0.4"
 
+# WebSocket support
+tokio-tungstenite = "0.20"
+futures-util = "0.3"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
 # Video and remote control
 h264-reader = "0.6"
 # For input injection we'll use platform-specific crates later
