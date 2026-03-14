@@ -1,0 +1,62 @@
+{
+  "appId": "com.nexusremote.client",
+  "productName": "NexusRemote",
+  "copyright": "Copyright © 2026 NexusRemote Team",
+  "icon": "assets/icons/icon.png",
+  "directories": {
+    "buildResources": "assets",
+    "output": "dist"
+  },
+  "files": [
+    "main.js",
+    "node_modules/**/*",
+    "package.json"
+  ],
+  "win": {
+    "target": [
+      {
+        "target": "nsis",
+        "arch": [
+          "x64"
+        ]
+      },
+      {
+        "target": "portable",
+        "arch": [
+          "x64"
+        ]
+      }
+    ],
+    "icon": "assets/icons/icon.ico",
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
+    "publisherName": "NexusRemote",
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "runAfterFinish": true,
+    "license": "LICENSE",
+    "perMachine": false,
+    "installerIcon": "assets/icons/icon.ico",
+    "uninstallerIcon": "assets/icons/icon.ico",
+    "installerHeader": "assets/icons/bitmap.bmp",
+    "installerSidebar": "assets/icons/bitmap.bmp",
+    "allowElevation": true,
+    "include": "build/installer.nsh"
+  },
+  "portable": {
+    "artifactName": "${productName}-${version}-portable.${ext}"
+  },
+  "publish": {
+    "provider": "github",
+    "owner": "facaibaofuwang",
+    "repo": "nexusremote-p2p-system"
+  },
+  "releaseInfo": {
+    "releaseName": "${productName} ${version}",
+    "releaseNotes": "See https://github.com/facaibaofuwang/nexusremote-p2p-system/releases"
+  }
+}
