@@ -7,7 +7,6 @@ flask-socketio==5.3.4
 
 # WebSocket支持
 python-socketio==5.9.0
-eventlet==0.33.3
 
 # 数据序列化
 Werkzeug==2.3.7

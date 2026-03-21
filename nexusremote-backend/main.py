@@ -32,7 +32,7 @@ except ImportError as e:
 # 创建Flask应用
 app = Flask(__name__)
 CORS(app)  # 允许跨域请求
-socketio = flask_socketio.SocketIO(app, cors_allowed_origins="*", async_mode='eventlet')
+socketio = flask_socketio.SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # 全局状态
 demo_instance = None
@@ -133,13 +133,48 @@ def update_data():
         print(f"📡 数据更新推送: {current_time}")
 
 def generate_routing_data():
-    """生成加权路由算法数据"""
+    """生成加权路由算法数据（使用真实算法）"""
     try:
-        if HAS_ORIGINAL_MODULES:
-            results = simulate_routing(num_nodes=100, num_lookups=1000)
-        else:
-            # 简化版本
-            results = {
+        # 导入我们的加权路由算法
+        import sys
+        import os
+        sys.path.append(os.path.dirname(__file__))
+        
+        try:
+            from weighted_routing import NetworkSimulator, WeightedRouting
+            
+            # 创建模拟器并运行演示
+            simulator = NetworkSimulator()
+            simulator.create_random_nodes(100, high_rep_ratio=0.2)
+            simulator.connect_mesh(10)
+            
+            # 运行模拟
+            results = simulator.simulate_routing(1000)
+            
+            # 计算优势
+            advantage = WeightedRouting.calculate_routing_advantage(
+                results['high_rep_nodes'],
+                results['low_rep_nodes'],
+                results['high_rep_selected'],
+                results['low_rep_selected']
+            )
+            
+            return {
+                "total_nodes": results['high_rep_nodes'] + results['low_rep_nodes'],
+                "high_rep_nodes": results['high_rep_nodes'],
+                "low_rep_nodes": results['low_rep_nodes'],
+                "high_rep_selected": results['high_rep_selected'],
+                "total_selections": results['total_lookups'],
+                "high_rep_selection_rate": results['high_rep_selected'] / results['total_lookups'],
+                "high_rep_population_rate": results['high_rep_nodes'] / (results['high_rep_nodes'] + results['low_rep_nodes']),
+                "advantage_ratio": advantage,
+                "algorithm_version": "weighted_routing_v1.0"
+            }
+            
+        except ImportError as e:
+            print(f"无法导入加权路由模块: {e}")
+            # 回退到简化版本
+            return {
                 "total_nodes": 100,
                 "high_rep_nodes": 30,
                 "low_rep_nodes": 70,
@@ -147,9 +182,10 @@ def generate_routing_data():
                 "total_selections": 1000,
                 "high_rep_selection_rate": 0.387,
                 "high_rep_population_rate": 0.3,
-                "advantage_ratio": 1.29
+                "advantage_ratio": 1.29,
+                "algorithm_version": "simplified"
             }
-        return results
+            
     except Exception as e:
         print(f"生成路由数据错误: {e}")
         return {
@@ -158,7 +194,8 @@ def generate_routing_data():
             "low_rep_nodes": 70,
             "high_rep_selection_rate": 0.387,
             "advantage_ratio": 1.29,
-            "error": str(e)
+            "error": str(e),
+            "algorithm_version": "error_fallback"
         }
 
 def generate_device_data():
@@ -439,4 +476,4 @@ if __name__ == '__main__':
     socketio.start_background_task(background_thread)
     
     # 启动服务器
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, use_reloader=False, allow_unsafe_werkzeug=True)

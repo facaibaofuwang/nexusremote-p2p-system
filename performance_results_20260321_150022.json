@@ -1,0 +1,13 @@
+{
+  "routing_speed": {
+    "average_ms": 5.826997756958008,
+    "min_ms": 4.175662994384766,
+    "max_ms": 9.73963737487793,
+    "std_dev_ms": 1.7766528441042966,
+    "tests": 10,
+    "throughput_nodes_per_sec": 8580.74811171758,
+    "throughput_lookups_per_sec": 17161.49622343516
+  },
+  "bottlenecks": [],
+  "recommendations": []
+}

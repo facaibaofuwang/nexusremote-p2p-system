@@ -109,23 +109,56 @@ impl NetworkSimulator {
     pub fn connect_mesh(&mut self, connections_per_node: usize) {
         let node_ids: Vec<_> = self.nodes.keys().cloned().collect();
         
+        // Separate nodes by reputation
+        let mut high_rep_nodes = Vec::new();
+        let mut low_rep_nodes = Vec::new();
+        
+        for node_id in &node_ids {
+            let node = self.nodes.get(node_id).unwrap();
+            if node.info.reputation.value() >= 700 {
+                high_rep_nodes.push(*node_id);
+            } else {
+                low_rep_nodes.push(*node_id);
+            }
+        }
+        
         // First collect all peer info we need
         let mut connections_to_add: Vec<(DeviceID, Vec<PeerInfo>)> = Vec::new();
         
         for node_id in &node_ids {
-            // Connect to random other nodes
+            let node = self.nodes.get(node_id).unwrap();
+            let is_high_rep = node.info.reputation.value() >= 700;
+            
             let mut connected = HashSet::new();
             connected.insert(*node_id);
             let mut targets = Vec::new();
             
-            for _ in 0..connections_per_node {
+            // High reputation nodes: prioritize connecting to other high rep nodes
+            if is_high_rep && !high_rep_nodes.is_empty() {
+                // Connect to other high rep nodes first (more connections for high rep nodes)
+                let high_rep_connections = (connections_per_node * 3) / 4; // 75% connections to high rep nodes
+                for _ in 0..high_rep_connections {
+                    if high_rep_nodes.len() > 1 {
+                        let mut candidate = high_rep_nodes[self.rng.gen_range(0..high_rep_nodes.len())];
+                        while connected.contains(&candidate) || candidate == *node_id {
+                            candidate = high_rep_nodes[self.rng.gen_range(0..high_rep_nodes.len())];
+                        }
+                        
+                        connected.insert(candidate);
+                        let peer_info = self.nodes.get(&candidate).unwrap().info.clone();
+                        targets.push(peer_info);
+                    }
+                }
+            }
+            
+            // Fill remaining connections with random nodes
+            while targets.len() < connections_per_node {
                 let mut candidate = node_ids[self.rng.gen_range(0..node_ids.len())];
                 while connected.contains(&candidate) {
                     candidate = node_ids[self.rng.gen_range(0..node_ids.len())];
                 }
                 
                 connected.insert(candidate);
-                // Get peer info now, while we have immutable access
                 let peer_info = self.nodes.get(&candidate).unwrap().info.clone();
                 targets.push(peer_info);
             }

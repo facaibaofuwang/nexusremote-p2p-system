@@ -158,29 +158,118 @@ app.get('/api/devices/:id', (req, res) => {
 });
 
 // 模拟加权路由算法数据
+const { exec } = require('child_process');
+
 app.get('/api/routing/algorithm', (req, res) => {
-  const algorithmData = {
-    name: '加权路由算法',
-    description: '基于节点信誉的智能路由选择',
-    formula: 'LogicalDistance = XOR(NodeID, TargetID) * (2000 / (Reputation + 1000))',
-    advantage: 1.29,
-    simulation: {
-      highRepNodes: 30,
-      lowRepNodes: 70,
-      highRepSelected: 387,
-      totalSelections: 1000,
-      advantageRatio: 1.29
-    },
-    nodes: Array.from({ length: 20 }, (_, i) => ({
-      id: i + 1,
-      reputation: i < 6 ? Math.floor(Math.random() * 300) + 700 : Math.floor(Math.random() * 250) + 50,
-      selectedCount: Math.floor(Math.random() * 50) + (i < 6 ? 30 : 10)
-    }))
-  };
+  // 使用Rust CLI工具运行真实的加权路由算法模拟
+  const rustBinaryPath = path.join(__dirname, '../nexusremote/target/release/main');
   
-  res.json({
-    success: true,
-    data: algorithmData
+  exec(`${rustBinaryPath} simulate --nodes 100 --lookups 500`, { timeout: 10000 }, (error, stdout, stderr) => {
+    if (error) {
+      console.error('运行Rust模拟失败:', error);
+      // 回退到模拟数据
+      const fallbackData = {
+        name: '加权路由算法',
+        description: '基于节点信誉的智能路由选择',
+        formula: 'LogicalDistance = XOR(NodeID, TargetID) * (3000 / (Reputation + 500))',
+        advantage: 1.58,
+        simulation: {
+          highRepNodes: 33,
+          lowRepNodes: 67,
+          highRepSelected: 520, // 51.98% of 1000
+          totalSelections: 1000,
+          advantageRatio: 1.58
+        },
+        algorithm_version: 'optimized_v2',
+        source: 'fallback_simulation'
+      };
+      
+      return res.json({
+        success: true,
+        data: fallbackData,
+        warning: '使用回退数据，Rust模拟失败'
+      });
+    }
+    
+    try {
+      // 从Rust输出中提取数据
+      let advantage = 1.58; // 默认值
+      let highRepNodes = 33;
+      let lowRepNodes = 67;
+      let highRepSelected = 520;
+      
+      // 解析输出
+      const lines = stdout.split('\n');
+      for (const line of lines) {
+        if (line.includes('High reputation nodes:')) {
+          const match = line.match(/High reputation nodes:\s*(\d+)/);
+          if (match) highRepNodes = parseInt(match[1]);
+        }
+        if (line.includes('Low reputation nodes:')) {
+          const match = line.match(/Low reputation nodes:\s*(\d+)/);
+          if (match) lowRepNodes = parseInt(match[1]);
+        }
+        if (line.includes('High reputation selection rate:')) {
+          const match = line.match(/High reputation selection rate:\s*([\d.]+)%/);
+          if (match) {
+            const rate = parseFloat(match[1]) / 100;
+            highRepSelected = Math.round(rate * 500); // 基于500次查找
+          }
+        }
+        if (line.includes('routing advantage')) {
+          const match = line.match(/have\s+([\d.]+)x\s+routing advantage/);
+          if (match) advantage = parseFloat(match[1]);
+        }
+      }
+      
+      const algorithmData = {
+        name: '加权路由算法',
+        description: '基于节点信誉的智能路由选择',
+        formula: 'LogicalDistance = XOR(NodeID, TargetID) * (3000 / (Reputation + 500))',
+        advantage: advantage,
+        simulation: {
+          highRepNodes: highRepNodes,
+          lowRepNodes: lowRepNodes,
+          highRepSelected: highRepSelected,
+          totalSelections: 500,
+          advantageRatio: advantage
+        },
+        algorithm_version: 'optimized_v2',
+        source: 'rust_simulation',
+        raw_output: stdout.substring(0, 500) // 限制输出长度
+      };
+      
+      res.json({
+        success: true,
+        data: algorithmData
+      });
+      
+    } catch (parseError) {
+      console.error('解析Rust输出失败:', parseError);
+      
+      // 回退数据
+      const fallbackData = {
+        name: '加权路由算法',
+        description: '基于节点信誉的智能路由选择',
+        formula: 'LogicalDistance = XOR(NodeID, TargetID) * (3000 / (Reputation + 500))',
+        advantage: 1.58,
+        simulation: {
+          highRepNodes: 33,
+          lowRepNodes: 67,
+          highRepSelected: 520,
+          totalSelections: 1000,
+          advantageRatio: 1.58
+        },
+        algorithm_version: 'optimized_v2',
+        source: 'fallback_parse_error'
+      };
+      
+      res.json({
+        success: true,
+        data: fallbackData,
+        warning: '解析失败，使用回退数据'
+      });
+    }
   });
 });
 
@@ -243,6 +332,18 @@ app.get('/connect.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'connect.html'));
 });
 
+// 健康检查端点
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: 'NexusRemote Frontend',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    rust_backend_connected: rustWebSocket && rustWebSocket.readyState === WebSocket.OPEN,
+    uptime: process.uptime()
+  });
+});
+
 // WebSocket服务器
 const server = app.listen(PORT, () => {
   console.log(`🚀 NexusRemote前端服务器运行在 http://localhost:${PORT}`);
@@ -254,22 +355,58 @@ const server = app.listen(PORT, () => {
   console.log(`   GET  /api/economy/model    # 通证经济模型数据`);
   console.log(`   POST /api/devices/connect  # 连接设备`);
   console.log(`   POST /api/devices/command  # 发送远程命令`);
+  console.log(`🔗 连接到Rust后端: ws://127.0.0.1:8081`);
 });
 
-// 创建WebSocket服务器
+// 连接到Rust WebSocket后端
+let rustWebSocket = null;
+
+function connectToRustBackend() {
+  try {
+    rustWebSocket = new WebSocket('ws://127.0.0.1:8081');
+    
+    rustWebSocket.on('open', () => {
+      console.log('✅ 成功连接到Rust WebSocket后端');
+    });
+    
+    rustWebSocket.on('message', (data) => {
+      console.log('📨 从Rust后端收到消息:', data.toString());
+      // 可以在这里将消息转发给前端客户端
+    });
+    
+    rustWebSocket.on('error', (error) => {
+      console.error('❌ Rust WebSocket连接错误:', error);
+    });
+    
+    rustWebSocket.on('close', () => {
+      console.log('🔌 Rust WebSocket连接关闭，5秒后重连...');
+      setTimeout(connectToRustBackend, 5000);
+    });
+    
+  } catch (error) {
+    console.error('❌ 连接Rust后端失败:', error);
+    setTimeout(connectToRustBackend, 5000);
+  }
+}
+
+// 初始连接
+connectToRustBackend();
+
+// 创建前端WebSocket服务器（用于浏览器连接）
 const wss = new WebSocket.Server({ server });
 
 wss.on('connection', (ws) => {
-  console.log('🔌 新的WebSocket连接已建立');
+  console.log('🔌 新的前端WebSocket连接已建立');
   
   // 发送欢迎消息
   ws.send(JSON.stringify({
     type: 'welcome',
     message: '连接到NexusRemote实时数据服务',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    rust_backend_connected: rustWebSocket && rustWebSocket.readyState === WebSocket.OPEN
   }));
   
-  // 定期发送模拟的实时数据
+  // 定期发送实时数据（从Rust后端或模拟数据）
   const interval = setInterval(() => {
     if (ws.readyState === WebSocket.OPEN) {
       const liveData = {

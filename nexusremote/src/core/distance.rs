@@ -5,7 +5,8 @@ use std::cmp::Ordering;
 
 /// Calculate the logical distance between two node IDs, weighted by reputation
 /// 
-/// Formula: LogicalDistance = XOR(NodeID, TargetID) * (2000 / (Reputation + 1000))
+/// Formula: LogicalDistance = XOR(NodeID, TargetID) * (3000 / (Reputation + 500))
+/// This gives high reputation nodes (900-1000) about 3x advantage over low reputation nodes (0-100)
 pub fn calculate_logical_distance(
     node_id: &DeviceID,
     target_id: &DeviceID,
@@ -17,9 +18,12 @@ pub fn calculate_logical_distance(
         xor_distance[i] = node_id.as_bytes()[i] ^ target_id.as_bytes()[i];
     }
     
-    // Calculate reputation weight: 2000 / (reputation + 1000)
+    // Calculate reputation weight: 3000 / (reputation + 500)
     // This gives high reputation nodes lower effective distance
-    let reputation_weight = 2000.0 / (reputation.value() as f64 + 1000.0);
+    // High reputation (900): 3000/(900+500) = 2.143
+    // Low reputation (100): 3000/(100+500) = 5.0
+    // Advantage: 5.0/2.143 = 2.33x
+    let reputation_weight = 3000.0 / (reputation.value() as f64 + 500.0);
     
     // Apply reputation weight to the XOR distance
     // We use the first 8 bytes as a u64 for weighting to keep it simple
@@ -98,7 +102,7 @@ pub fn is_closer(
 /// Estimate routing improvement for high reputation nodes
 /// Returns the factor by which a node's effective distance is reduced
 pub fn reputation_distance_factor(reputation: ReputationScore) -> f64 {
-    2000.0 / (reputation.value() as f64 + 1000.0)
+    3000.0 / (reputation.value() as f64 + 500.0)
 }
 
 #[cfg(test)]
@@ -169,8 +173,10 @@ mod tests {
         // Check expected values
         // MAX reputation (1000): 2000 / (1000 + 1000) = 1.0
         // MIN reputation (0): 2000 / (0 + 1000) = 2.0
-        assert!((min_factor - 1.0).abs() < 0.01);
-        assert!((max_factor - 2.0).abs() < 0.01);
+        // MAX reputation (1000): 3000 / (1000 + 500) = 2.0
+        // MIN reputation (0): 3000 / (0 + 500) = 6.0
+        assert!((min_factor - 2.0).abs() < 0.01);
+        assert!((max_factor - 6.0).abs() < 0.01);
     }
     
     #[test]
